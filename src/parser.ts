@@ -16,7 +16,7 @@ export function tokenize(input: string): Token[] {
         if (/\s/.test(char)) {
             // Ignore whitespace
             i++;
-        } else if (char === 'λ' || char === "\\") {
+        } else if (char === 'λ' || char === "\\" || char === "%") {
             tokens.push({ type: 'lambda' });
             i++;
         } else if (char === '.') {
@@ -162,101 +162,123 @@ export type Application = {
 // Expression can be any of these three types
 export type Expression = Variable | Abstraction | Application;
 
-export function parseAST(tokens: Token[]) {
+export function parseAST(tokens: Token[]): Expression {
     let currIndex = 0;
-    function isEnd() {
-        return currIndex >= tokens.length
-    }
 
-    function nextToken(): Token {
-        return tokens[currIndex];
-    }
+    // Helper to peek at current token
+    const peek = () => tokens[currIndex];
+    const isAtEnd = () => currIndex >= tokens.length;
 
-    function currToken(): Token {
-        return tokens[currIndex - 1];
-    }
-
-    function consume(): Token {
-        console.log("Consume is called on ", nextToken());
-        return tokens[currIndex++];
-    }
-
-    function match(...types: TokenType[]): boolean {
-        console.log("Matching ", types);
-        if (isEnd()) {
-            console.log("Is end ", types);
-            return false;
-        }
-        if (types.includes(nextToken().type)) {
-            console.log("Matched: ", consume(), types);
+    // Helper to consume a token if it matches the type
+    function match(type: TokenType): boolean {
+        if (isAtEnd()) return false;
+        if (peek().type === type) {
+            currIndex++;
             return true;
         }
-        console.log("Unmatched", currToken(), types);
-
         return false;
     }
 
+    // Helper to consume a specific token or throw
+    function consume(type: TokenType, message: string): Token {
+        if (isAtEnd() || peek().type !== type) {
+            throw new Error(message + ` Found: ${isAtEnd() ? "EOF" : peek().type}`);
+        }
+        return tokens[currIndex++];
+    }
+
+    // 1. Parse Expression: The entry point
+    // Rules:
+    // Expr -> Abstraction | Application
     function parseExpression(): Expression {
-        if (match("lambda")) {
+        // If we see a Lambda, it's definitely an abstraction
+        if (peek()?.type === 'lambda') {
             return parseAbstraction();
-        } else {
-            return parseApplication();
         }
+        // Otherwise, it's an application chain (or a single atom)
+        return parseApplication();
     }
 
+    // 2. Parse Abstraction (Handles λx y. body sugar)
     function parseAbstraction(): Abstraction {
-        if (!match("variable")) {
-            throw new Error("Expect variable");
+        consume('lambda', "Expected 'λ'");
+        
+        // We need at least one parameter
+        const params: Variable[] = [];
+        
+        // Keep consuming variables until we hit the dot
+        // This handles "λx y z." syntax
+        while (!isAtEnd() && peek().type === 'variable') {
+            const token = consume('variable', "Expected variable");
+            params.push({ type: 'variable', name: (token as any).name });
         }
-        const param = parseVariable();
-        if (!match("dot")) {
-            throw new Error("Expect dot");
+
+        if (params.length === 0) {
+            throw new Error("Expected at least one parameter after 'λ'");
         }
-        const body: Expression = parseExpression();
-        return { type: 'abstraction', param, body };
+
+        consume('dot', "Expected '.' after lambda parameters");
+
+        // The body extends as far to the right as possible
+        const body = parseExpression(); 
+
+        // Desugar: Convert [x, y, z] body into λx. λy. λz. body
+        // We reduce from right to left
+        return params.reduceRight((acc, param) => {
+            return { type: 'abstraction', param, body: acc };
+        }, body) as Abstraction;
     }
 
+    // 3. Parse Application
+    // This handles left-associativity: "x y z" -> "((x y) z)"
     function parseApplication(): Expression {
-        console.log("parseApplication()");
+        let expr = parseAtom(); // Get the first item (e.g., "x")
 
-        let expr: Expression = parsePrimary();  // Get the first part of the application
-        while (match('paren-open')) {
-            const arg = parseExpression();  // Parse the argument
-            if (!match('paren-close')) {
-                throw new Error("Expected ')' after application argument");
-            };
-            expr = { type: 'application', func: expr, argument: arg };
+        while (!isAtEnd()) {
+            const next = peek();
+            
+            // What can start an argument?
+            // A variable: "f x"
+            // A parenthesis: "f (x)"
+            // A lambda (sometimes allowed in loose grammar): "f λx.x"
+            if (next.type === 'variable' || next.type === 'paren-open' || next.type === 'lambda') {
+                const arg = parseAtom();
+                expr = { type: 'application', func: expr, argument: arg };
+            } else {
+                // If we see a ')' or '.', we stop application parsing
+                break;
+            }
         }
 
         return expr;
     }
 
-    function parsePrimary(): Expression {
-        if (match("variable")) {
-            return parseVariable();
-        } else if (match("paren-open")) {
+    // 4. Parse Atom
+    // The smallest units: variables, parenthesized expressions, or nested lambdas
+    function parseAtom(): Expression {
+        if (match('paren-open')) {
             const expr = parseExpression();
-            if (!match("paren-close")) {
-                throw new Error("Expected ')' after expression");
-            }
+            consume('paren-close', "Expected ')'");
             return expr;
-        } else {
-            throw new Error(`Unexpected token ${JSON.stringify(nextToken())}`);
+        } else if (peek()?.type === 'lambda') {
+            return parseAbstraction();
+        } else if (peek()?.type === 'variable') {
+            const token = consume('variable', "Expected variable");
+            return { type: 'variable', name: (token as any).name };
         }
+        
+        throw new Error(`Unexpected token: ${JSON.stringify(peek())}`);
     }
 
-    function parseVariable(): Variable {
-        const token = tokens[currIndex - 1];
-        if (!token) {
-            throw new Error(`Index [${currIndex}] is out of bound`);
-        }
-        if (token.type !== "variable") {
-            // logCurrState();
-            throw new Error(`Token "${JSON.stringify(token)}} " is not a variable`);
-        };
-        return { type: 'variable', name: token.name };
+    // Start parsing
+    const result = parseExpression();
+    
+    // CRITICAL FIX: Ensure we consumed the whole string
+    if (!isAtEnd()) {
+        throw new Error(`Unexpected token at end of input: ${JSON.stringify(peek())}`);
     }
-    return parseExpression();
+    
+    return result;
 }
 
 export function parse(src: string) {
