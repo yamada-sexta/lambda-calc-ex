@@ -1,11 +1,14 @@
 import { createSignal, type Component } from 'solid-js';
 import { LambdaTree } from './lambda-tree';
+import { makePersisted } from '@solid-primitives/storage/dist/persisted';
 
 // import logo from './logo.svg';
 // import styles from './App.module.css';
 
 const App: Component = () => {
-  const [lambda, setLambda] = createSignal("");
+  const [lambda, setLambda] = makePersisted(createSignal("\\x.x"), {
+    name: "lambda-expression"
+  });
 
   return (
     <div
