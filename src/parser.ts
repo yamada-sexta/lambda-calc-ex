@@ -1,5 +1,3 @@
-
-
 // Token types
 export type Token = { type: 'lambda' | 'dot' | 'paren-open' | 'paren-close' } |
 { type: "variable", name: string };

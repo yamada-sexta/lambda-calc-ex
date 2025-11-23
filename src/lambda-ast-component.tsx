@@ -1,81 +1,61 @@
-import { Accessor, Component } from "solid-js";
+import { Component, For } from "solid-js";
 import { Expression } from "./parser";
-
-function getRandomNiceColor(): string {
-    // Generate a random number between 128 and 255 to ensure a light color (bright).
-    const randomChannel = () => Math.floor(Math.random() * 128 + 128);
-
-    // Convert the number to hexadecimal and pad with 0 if needed.
-    const toHex = (value: number) => value.toString(16).padStart(2, '0');
-
-    // Get random values for red, green, and blue.
-    const red = randomChannel();
-    const green = randomChannel();
-    const blue = randomChannel();
-
-    // Return the color in hexadecimal format.
-    return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
-}
+import "./LambdaAstComponent.css"; // Assuming you save the CSS below in this file
 
 export interface LambdaAstComponentProps {
-    node: Expression
+    node: Expression;
 }
 
 export const LambdaAstComponent: Component<LambdaAstComponentProps> = (props) => {
-    const node = props.node;
-    switch (node.type) {
-        case "variable": return (
-            <div
-                style={
-                    {
-                        background: getRandomNiceColor(),
-                        padding: "10px"
-                    }
-                }
-            >{node.name}</div>
-        );
-        case "abstraction": return (
-            <div
-                style={
-                    {
-                        background: getRandomNiceColor(),
-                        display: "flex",
-                        "flex-direction": "row",
-                        padding: "10px"
-                    }
-                }
-            >
-                <LambdaAstComponent
-                    node={node.param}
-                ></LambdaAstComponent>
-                <div>.</div>
-                <LambdaAstComponent
-                    node={node.body}
-                ></LambdaAstComponent>
-            </div>
-        )
-        case "application": return (
-            <div
-                style={
-                    {
-                        background: getRandomNiceColor(),
-                        display: "flex",
-                        "flex-direction": "row",
-                        padding: "10px"
-                    }
-                }
-            >
-                <LambdaAstComponent
-                    node={node.func}
-                ></LambdaAstComponent>
-                <div>(</div>
-                <LambdaAstComponent
-                    node={node.argument}
-                ></LambdaAstComponent>
-                <div>)</div>
-            </div>
-        )
+    // We use a dynamic class list based on the node type for specific styling
+    const containerClass = () => `lambda-node lambda-${props.node.type}`;
+
+    const renderContent = () => {
+        const node = props.node;
+        switch (node.type) {
+            case "variable":
+                return <span class="variable-name">{node.name}</span>;
+
+            case "abstraction":
+                return (
+                    <>
+                        <span class="symbol lambda-symbol">λ</span>
+                        <div class="abstraction-header">
+                             {/* We reuse the component for the param, 
+                                 but styling will make it look like a declaration */}
+                            <LambdaAstComponent node={node.param} />
+                        </div>
+                        <span class="symbol dot-symbol">.</span>
+                        <div class="abstraction-body">
+                            <LambdaAstComponent node={node.body} />
+                        </div>
+                    </>
+                );
+
+            case "application":
+                return (
+                   <>
+                        {/* Wrap function in a specific container for styling */}
+                        <div class="application-func">
+                             <LambdaAstComponent node={node.func} />
+                        </div>
+                        {/* We can make parens subtler or only appear on hover via CSS if desired,
+                            but keeping them explicit for now. */}
+                        <span class="symbol paren">(</span>
+                        <div class="application-arg">
+                            <LambdaAstComponent node={node.argument} />
+                        </div>
+                        <span class="symbol paren">)</span>
+                   </>
+                );
+            default:
+                return <span>UNKNOWN NODE</span>
+        }
     }
 
-    return (<>UNKNOWN NODE</>)
-}
+    return (
+        <div class={containerClass()}>
+            {renderContent()}
+        </div>
+    );
+};

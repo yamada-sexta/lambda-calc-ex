@@ -16,11 +16,9 @@ const App: Component = () => {
         }
       }
     >
-      <p>View Source Code on <a href="https://github.com/nannoda/lambda-calc-ex">GitHub</a></p>
+      <label>Lambda Expression:</label>
       <input
         oninput={(v) => { 
-          // console.log(v);
-          
           setLambda(v.target.value) 
         }}
       ></input>

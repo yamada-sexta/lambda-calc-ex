@@ -1,0 +1,105 @@
+/* --- Typography & Reset --- */
+.lambda-node {
+    font-family: 'Fira Code', 'Roboto Mono', monospace;
+    font-size: 1rem;
+    line-height: 1.5;
+    box-sizing: border-box;
+    transition: all 0.2s ease-in-out;
+}
+
+/* --- Common Container Styles --- */
+.lambda-node {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    margin: 4px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
+}
+
+/* Hover effect to highlight the current scope tree */
+.lambda-node:hover {
+    box-shadow: 4px 4px 10px rgba(0,0,0,0.15);
+    z-index: 10; /* Bring hovered element to front */
+}
+
+
+/* --- VARIABLE STYLES (The "Atoms") --- */
+/* Give variables a distinct "pill" shape */
+.lambda-variable {
+    background-color: #ffedcc; /* Pastel Orange */
+    border-color: #ffd699;
+    color: #a35200;
+    font-weight: bold;
+    padding: 4px 10px; /* Slightly smaller padding for atoms */
+    border-radius: 20px; /* Pill shape */
+}
+
+.variable-name {
+    display: inline-block;
+}
+
+
+/* --- ABSTRACTION STYLES (λx.body) --- */
+/* Abstractions act as containers defining a scope */
+.lambda-abstraction {
+    background-color: #e6f0ff; /* Pastel Blue */
+    border-color: #b3d1ff;
+    color: #004085;
+    flex-wrap: wrap; /* Allow body to wrap if too long */
+}
+
+/* Style the header (λx) differently from the body */
+.abstraction-header .lambda-variable {
+    /* Make the parameter look slightly different than a usage variable */
+    background-color: #cce5ff; 
+    border-color: #99caff;
+    margin-left: 4px;
+}
+
+.abstraction-body {
+    display: inline-flex;
+    margin-left: 8px;
+    padding-left: 8px;
+    border-left: 2px dotted #b3d1ff; /* Visual separator for the body */
+}
+
+/* --- APPLICATION STYLES (f x) --- */
+/* Applications show two things combining */
+.lambda-application {
+    background-color: #e6ffed; /* Pastel Green */
+    border-color: #b3ffcc;
+    color: #155724;
+    align-items: center;
+}
+
+.application-func {
+    margin-right: 4px;
+}
+
+.application-arg {
+    margin-left: 4px;
+}
+
+
+/* --- Symbols (λ, ., parens) --- */
+.symbol {
+    font-weight: bold;
+    opacity: 0.7;
+    margin: 0 4px;
+}
+
+.lambda-symbol {
+    font-size: 1.2em;
+    color: #0056b3;
+}
+
+.dot-symbol {
+    font-size: 1.5em;
+    line-height: 0.5;
+}
+
+.paren {
+    color: #8fd19e;
+}
